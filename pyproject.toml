@@ -1,0 +1,9 @@
+[project]
+name = "dataflow-template"
+version = "0.1.0"
+description = "Dataflow Starter Kit"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "apache-beam[gcp]>=2.66.0",
+]
