@@ -3,7 +3,6 @@
 import logging
 
 import apache_beam as beam
-
 from apache_beam.options.pipeline_options import PipelineOptions, SetupOptions
 
 from dataflow_starter_kit.options.starter_kit_options import DataflowStarterKitOptions
@@ -20,21 +19,21 @@ def run():
     input_count = int(pipeline_arguments.input)
 
     logging.info(f"Starting pipeline with input_count={input_count}")
-    
+
     with beam.Pipeline(options=pipeline_options) as p:
         # Create input data (repeat based on input argument)
         input_data = config.INPUT_DATA * input_count
         lines = p | 'CreateInput' >> beam.Create(input_data)
-        
+
         # Apply transform
         transformed = lines | 'ProcessElement' >> beam.ParDo(ProcessElement())
-        
+
         # Aggregate results
         total = transformed | 'SumAll' >> beam.CombineGlobally(sum)
-        
+
         # Log/print results
         _ = total | 'PrintResults' >> beam.Map(lambda x: logging.info(f"Total time: {x:.3f}s"))
-    
+
     logging.info("Pipeline completed successfully")
 
 

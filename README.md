@@ -1,108 +1,153 @@
-# Dataflow Template Toolkit
+# Dataflow Template MCP Server
 
-A toolkit for creating standardized Apache Beam pipelines for Google Cloud Dataflow across your organization.
+MCP server and CLI tool for creating standardized Dataflow projects from templates.
 
-## Overview
+## What's Included
 
-This project provides:
+- MCP server for AI coding assistants (Cursor, Claude, etc.)
+- CLI tool for manual project creation
+- Standardized Dataflow template structure
+- GitHub Actions workflow for automated deployment
 
-1. **Template** - A standardized Dataflow starter template
-2. **CLI Tool** - Command-line interface for creating new projects
-3. **MCP Server** - Model Context Protocol server for AI coding assistants
+## Getting Started
 
-## Structure
+Clone the repository:
 
-```
-dataflow_template/
-│
-├── pyproject.toml                # Main env for CLI/MCP tools
-├── cli/
-│   └── cli.py                    # CLI tool for creating projects
-│
-├── mcp_server/
-│   └── mcp_server.py            # MCP server for AI assistants
-│
-├── template_files/               # The actual template
-│   ├── dataflow_starter_kit/
-│   │   ├── pipeline.py          # Main pipeline code
-│   │   ├── transforms/
-│   │   ├── options/
-│   │   └── utils/
-│   ├── Dockerfile
-│   ├── pyproject.toml           # Template's pyproject.toml
-│   └── README.md
-│
-└── README.md                     # This file
+```bash
+git clone https://github.com/bharath03-a/dataflow_template
+cd dataflow_template
 ```
 
 ## Installation
 
 ```bash
-# Using uv (recommended)
-uv sync
-
-# Or using pip
+# Install dependencies
 pip install -e .
+
+# Or using uv
+uv sync
 ```
 
 ## Usage
 
-### Creating a New Dataflow Project
+### CLI Tool
+
+Create a new Dataflow project:
 
 ```bash
-# Using the CLI tool
-python -m cli.cli create /path/to/new/project
-
-# Or after installation
-dataflow-create create my-new-project
+dataflow-create create /path/to/new-project
 ```
 
-### Using MCP Server
-
-The MCP server enables AI coding assistants (Cursor, Copilot, Claude) to create standardized projects.
-
-**Note**: The MCP server is designed to be run by AI coding assistants, not for manual interaction. For manual usage, use the CLI instead.
-
-See `mcp_server/README.md` for configuration details.
-
-### Template Structure
-
-Each project created from the template includes:
-
-- **pipeline.py** - Main pipeline entry point
-- **transforms/** - Reusable Beam transforms
-- **options/** - Custom pipeline options
-- **utils/** - Utility functions
-- **Dockerfile** - Container configuration
-- **pyproject.toml** - Project dependencies
-
-## Quick Start with Created Project
-
-After creating a project:
+Or run the template locally:
 
 ```bash
-cd /path/to/new/project
-uv sync
-python -m dataflow_starter_kit.pipeline --input=1 --runner=DirectRunner
+dataflow-create run-template
+```
+
+### MCP Server (Local/Stdio)
+
+Add to your MCP client configuration (e.g., `~/.cursor/mcp.json`):
+
+```json
+{
+  "mcpServers": {
+    "dataflow-template": {
+      "command": "python",
+      "args": ["-m", "mcp_server.mcp_server"],
+      "cwd": "/path/to/dataflow_template"
+    }
+  }
+}
+```
+
+### MCP Server (HTTP/Cloud Run)
+
+The server can run as an HTTP service for remote access.
+
+Set environment variables:
+
+```bash
+export MCP_TRANSPORT=streamable-http
+export MCP_HOST=0.0.0.0
+export MCP_PORT=8000
+```
+
+Run the server:
+
+```bash
+python -m mcp_server.mcp_server
 ```
 
 ## Deployment
 
-See `template_files/README.md` for detailed deployment instructions including:
+### Local Docker Build
 
-- Local testing with DirectRunner
-- Docker builds
-- Google Cloud Dataflow deployment
-- Flex template creation
+```bash
+docker build -t dataflow-mcp-server .
+docker run -p 8080:8080 \
+  -e MCP_TRANSPORT=streamable-http \
+  -e MCP_HOST=0.0.0.0 \
+  dataflow-mcp-server
+```
 
-## Contributing
+### Cloud Run Deployment
 
-To update the template:
+The project includes a GitHub Actions workflow for automatic deployment to Cloud Run.
 
-1. Modify files in `template_files/`
-2. Test with: `python -m cli.cli create /tmp/test-project`
-3. Verify the created project works correctly
+1. Set up GitHub Secrets (see `GITHUB_SETUP.md`):
 
-## License
+   - `GCP_PROJECT_ID`: Your Google Cloud project ID
+   - `GCP_SA_KEY`: Service account JSON key
 
-[Your License Here]
+2. Push to main branch to trigger deployment
+
+3. Manual deployment:
+
+```bash
+gcloud run deploy dataflow-mcp-server \
+  --source . \
+  --platform managed \
+  --region us-central1 \
+  --allow-unauthenticated \
+  --set-env-vars MCP_TRANSPORT=streamable-http \
+  --port 8080
+```
+
+## Testing
+
+Test the MCP server:
+
+```bash
+python test_mcp_server.py
+```
+
+Set `MCP_SERVER_URL` environment variable to test against a remote server.
+
+## Project Structure
+
+```
+.
+├── mcp_server/          # MCP server implementation
+├── cli/                 # CLI tool
+├── template_files/      # Dataflow template files
+├── test_mcp_server.py   # Test script
+└── .github/workflows/   # GitHub Actions workflow
+```
+
+## Development
+
+Run linting:
+
+```bash
+ruff check .
+ruff format .
+```
+
+## Available Tools
+
+- `create_dataflow_project`: Creates a new Dataflow project from the template
+- `health_check`: Checks if the MCP server is running and template is accessible
+
+---
+
+With love, from a fellow frustrated data engineer

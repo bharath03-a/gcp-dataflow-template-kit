@@ -1,13 +1,16 @@
 import asyncio
+import os
+
 from fastmcp import Client
+
 
 async def test_server():
     # Test the MCP server using streamable-http transport
-    # Your Cloud Run service URL
-    server_url = "https://dataflow-mcp-server-308763801667.us-central1.run.app/mcp"
-    
+    # Get URL from environment variable or use default
+    server_url = os.getenv("MCP_SERVER_URL", "https://dataflow-mcp-server-308763801667.us-central1.run.app/mcp")
+
     print(f"Connecting to MCP server at: {server_url}")
-    
+
     try:
         async with Client(server_url) as client:
             # List available tools
@@ -17,7 +20,7 @@ async def test_server():
                 print(f">>> 🛠️  Tool found: {tool.name}")
                 if hasattr(tool, 'description'):
                     print(f"    Description: {tool.description}")
-            
+
             # Test health_check tool
             print("\n>>> 🪛  Calling health_check tool...")
             try:
@@ -26,7 +29,13 @@ async def test_server():
                 if hasattr(result, 'content'):
                     # content is typically a list of TextContent objects
                     if result.content:
-                        print(f"<<< ✅ Result: {result.content[0].text if hasattr(result.content[0], 'text') else result.content[0]}")
+                        content_item = result.content[0]
+                        text = (
+                            content_item.text
+                            if hasattr(content_item, 'text')
+                            else content_item
+                        )
+                        print(f"<<< ✅ Result: {text}")
                     else:
                         print(f"<<< ✅ Result: {result}")
                 elif hasattr(result, 'text'):
@@ -37,7 +46,7 @@ async def test_server():
                 print(f"<<< ❌ Error calling health_check: {e}")
                 import traceback
                 traceback.print_exc()
-            
+
             # Test create_dataflow_project tool (with a test directory)
             print("\n>>> 🪛  Calling create_dataflow_project tool...")
             try:
@@ -48,7 +57,13 @@ async def test_server():
                 # CallToolResult has content attribute
                 if hasattr(result, 'content'):
                     if result.content:
-                        print(f"<<< ✅ Result: {result.content[0].text if hasattr(result.content[0], 'text') else result.content[0]}")
+                        content_item = result.content[0]
+                        text = (
+                            content_item.text
+                            if hasattr(content_item, 'text')
+                            else content_item
+                        )
+                        print(f"<<< ✅ Result: {text}")
                     else:
                         print(f"<<< ✅ Result: {result}")
                 elif hasattr(result, 'text'):
@@ -59,7 +74,7 @@ async def test_server():
                 print(f"<<< ❌ Error calling create_dataflow_project: {e}")
                 import traceback
                 traceback.print_exc()
-                
+
     except Exception as e:
         print(f"\n❌ Failed to connect to server: {e}")
         print("Make sure the server is running and accessible.")

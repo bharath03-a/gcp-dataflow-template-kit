@@ -7,14 +7,14 @@ import apache_beam as beam
 
 class ProcessElement(beam.DoFn):
     """Simple transform to process each element."""
-    
+
     def process(self, element: str):
         """
         Process a single element.
-        
+
         Args:
             element: Input string element (format: "Name - time")
-            
+
         Yields:
             Processed float element (lap time)
         """

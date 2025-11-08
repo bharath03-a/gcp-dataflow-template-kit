@@ -18,8 +18,8 @@ RUN pip install --no-cache-dir --upgrade pip && \
 
 # Copy application code
 COPY mcp_server/ ./mcp_server/
-COPY template_files/ ./template_files/
 COPY cli/ ./cli/
+COPY template_files/ ./template_files/
 
 # Set environment variables for Cloud Run
 ENV MCP_TRANSPORT=streamable-http
