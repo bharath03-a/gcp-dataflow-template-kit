@@ -218,13 +218,15 @@ def _get_remote_creation_instructions(template_dir: Path, target_dir: str) -> st
         for file_path in sorted(files_info):
             instructions.append(f"  - {target_dir}/{file_path}")
 
+        instructions.append("\nIMPORTANT: Since this server is running remotely, you need to:")
+        instructions.append("1. Use the 'list_template_files' tool to see all available files")
+        instructions.append("2. Use the 'get_template_file_content' tool for each file you need")
         instructions.append(
-            f"\nTo create these files, use the 'get_template_file_content' tool "
-            f"for each file, then create them in the '{target_dir}' directory."
+            f"3. Create each file in the '{target_dir}' directory with the content received"
         )
         instructions.append(
-            "\nFile contents are available via the 'get_template_file_content' tool "
-            "or MCP resources using URI pattern 'template://{file_path}'."
+            "\nExample: Call get_template_file_content('dataflow_starter_kit/pipeline.py') "
+            "to get the content of pipeline.py"
         )
 
         return "\n".join(instructions)
@@ -377,6 +379,35 @@ def get_template_file_content(file_path: str) -> str:
         return f"Error reading file: {str(e)}"
 
 
+def get_all_template_files() -> list[str]:
+    """
+    Get list of all template file paths relative to template directory.
+
+    Returns:
+        List of relative file paths
+    """
+    try:
+        template_dir = get_template_dir()
+        error = validate_template_dir(template_dir)
+        if error:
+            return []
+
+        files = []
+        for root, dirs, filenames in os.walk(template_dir):
+            dirs[:] = [d for d in dirs if not d.startswith(".") and d != "__pycache__"]
+            for filename in filenames:
+                if filename.startswith(".") or filename.endswith(".pyc"):
+                    continue
+                file_path = Path(root) / filename
+                relative_path = file_path.relative_to(template_dir)
+                files.append(str(relative_path))
+
+        return sorted(files)
+    except Exception:
+        logger.exception("Error getting template files")
+        return []
+
+
 @mcp.resource("template://{file_path}")
 async def get_template_file_resource(file_path: str) -> str:
     """
@@ -422,6 +453,13 @@ async def get_template_file_resource(file_path: str) -> str:
     except Exception as e:
         logger.exception(f"Error reading template file: {file_path}")
         return f"Error reading file: {str(e)}"
+
+
+# Note: Template resources are handled by the @mcp.resource decorator above
+# which uses a template pattern "template://{file_path}". This allows agents
+# to access any template file using the URI pattern.
+# Agents should use list_template_files() tool first to discover available files,
+# then access them via template:// URIs or get_template_file_content() tool.
 
 
 def get_server_config() -> tuple[TransportType, str, int]:
