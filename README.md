@@ -133,8 +133,9 @@ Set `MCP_SERVER_URL` environment variable to test against a remote server.
 ├── mcp_server/          # MCP server implementation
 ├── cli/                 # CLI tool
 ├── template_files/      # Dataflow template files
-├── test_mcp_server.py   # Test script
+├── tests/               # Test script
 └── .github/workflows/   # GitHub Actions workflow
+└── .Dockerfile
 ```
 
 ## Development

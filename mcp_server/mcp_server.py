@@ -39,24 +39,45 @@ def get_template_dir() -> Path:
     """
     Get the template directory path, handling both local and installed deployments.
 
+    Path resolution:
+    - Local: Resolves to <project_root>/template_files/
+    - Docker/Remote: Resolves to /app/template_files/ (template_files copied to container)
+
+    The template files are bundled with the server code, so they exist in the same
+    filesystem whether running locally or in a remote Docker container.
+
     Checks in order:
-    1. Relative to this file (local development)
+    1. Relative to this file (local development or Docker: parent.parent/template_files)
     2. Environment variable DATAFLOW_TEMPLATE_DIR
     3. Default relative path (fallback)
 
     Returns:
         Path to template directory (may not exist)
     """
+    # Calculate path relative to this file location
+    # Local: <project_root>/mcp_server/mcp_server.py -> <project_root>/template_files/
+    # Docker: /app/mcp_server/mcp_server.py -> /app/template_files/
     local_template = Path(__file__).parent.parent / TEMPLATE_DIR_NAME
+    logger.debug(
+        f"Resolving template directory: __file__={__file__}, "
+        f"computed path={local_template}, exists={local_template.exists()}"
+    )
+
     if local_template.exists():
+        logger.info(f"Template directory found at: {local_template} (relative to code)")
         return local_template
 
     env_template = os.getenv("DATAFLOW_TEMPLATE_DIR")
     if env_template:
         env_path = Path(env_template)
         if env_path.exists():
+            logger.info(f"Template directory found via env var: {env_path}")
             return env_path
 
+    logger.warning(
+        f"Template directory not found at {local_template}, "
+        "but returning path anyway (may fail later)"
+    )
     return local_template
 
 
@@ -166,7 +187,20 @@ async def create_dataflow_project(target_dir: str = ".") -> str:
 
         logger.info(f"Creating Dataflow project at: {target_path}")
         try:
-            shutil.copytree(template_dir, target_path, dirs_exist_ok=True)
+            # Ensure target directory exists
+            target_path.mkdir(parents=True, exist_ok=True)
+
+            # Copy contents of template_dir into target_path (not the directory itself)
+            for item in template_dir.iterdir():
+                # Skip hidden files and __pycache__
+                if item.name.startswith(".") or item.name == "__pycache__":
+                    continue
+
+                dest_item = target_path / item.name
+                if item.is_dir():
+                    shutil.copytree(item, dest_item, dirs_exist_ok=True)
+                else:
+                    shutil.copy2(item, dest_item)
         except PermissionError as e:
             return handle_error(e, "Permission denied when creating project")
         except shutil.Error as e:
@@ -218,15 +252,46 @@ def _get_remote_creation_instructions(template_dir: Path, target_dir: str) -> st
         for file_path in sorted(files_info):
             instructions.append(f"  - {target_dir}/{file_path}")
 
-        instructions.append("\nIMPORTANT: Since this server is running remotely, you need to:")
-        instructions.append("1. Use the 'list_template_files' tool to see all available files")
-        instructions.append("2. Use the 'get_template_file_content' tool for each file you need")
+        instructions.append("\n" + "=" * 80)
+        instructions.append("CRITICAL: This server is running remotely. You MUST use MCP tools!")
+        instructions.append("=" * 80)
+        instructions.append("\n⚠️  DO NOT:")
+        instructions.append("  - Try to read files using local file paths")
+        instructions.append("  - Use read_file() with template paths")
+        instructions.append("  - Assume template files exist in your workspace")
+        instructions.append("\n✅ DO:")
+        instructions.append("  - Call MCP tools: 'get_template_file_content'")
+        instructions.append("  - Pass template-relative paths (e.g., 'README.md')")
+        instructions.append("  - Use the exact tool name and parameter format below")
+        instructions.append("\n📋 STEP-BY-STEP:")
+        instructions.append("\n1. For each file above, call the MCP tool:")
+        instructions.append('   Tool: "get_template_file_content"')
+        instructions.append('   Parameter: {"file_path": "<template_relative_path>"}')
+        instructions.append("\n2. The tool returns the file content as a string.")
         instructions.append(
-            f"3. Create each file in the '{target_dir}' directory with the content received"
+            f"\n3. Create the file locally at: {target_dir}/<template_relative_path>"
+        )
+        instructions.append("   Use the content returned by the tool.")
+        instructions.append("\n4. Repeat for all files listed above.")
+        instructions.append("\n📝 CONCRETE EXAMPLES:")
+        instructions.append("\nTo create README.md:")
+        instructions.append('  → Call: get_template_file_content({"file_path": "README.md"})')
+        instructions.append("  → Tool returns: file content string")
+        instructions.append(f"  → Create file: {target_dir}/README.md with returned content")
+        instructions.append("\nTo create dataflow_starter_kit/pipeline.py:")
+        instructions.append(
+            "  → Call: get_template_file_content("
+            '{"file_path": "dataflow_starter_kit/pipeline.py"})'
+        )
+        instructions.append("  → Tool returns: file content string")
+        instructions.append(
+            f"  → Create file: {target_dir}/dataflow_starter_kit/pipeline.py "
+            "with returned content"
         )
         instructions.append(
-            "\nExample: Call get_template_file_content('dataflow_starter_kit/pipeline.py') "
-            "to get the content of pipeline.py"
+            "\n💡 NOTE: The file_path parameter is relative to the template directory "
+            "on the server, NOT a local filesystem path. The server has its own copy "
+            "of template files bundled with the code."
         )
 
         return "\n".join(instructions)
@@ -337,28 +402,51 @@ def list_template_files() -> str:
 @mcp.tool()
 def get_template_file_content(file_path: str) -> str:
     """
-    Get the content of a specific template file.
+    Get the content of a specific template file from the server's template directory.
+
+    How it works:
+    - Template files are bundled with the server code (copied into Docker container)
+    - When you pass "README.md", server resolves to <template_dir>/README.md
+    - In Docker: <template_dir> = /app/template_files/ (copied during Docker build)
+    - Server reads from its own filesystem and returns content to you
+    - Cursor/agent receives the file content and can create it locally
+
+    IMPORTANT: The file_path is relative to the template directory on the SERVER,
+    NOT a path on your local machine. The server has its own copy of template files
+    bundled with the code (see Dockerfile line 22: COPY template_files/).
 
     Args:
-        file_path: Relative path to the file within the template directory
-                  (e.g., "pipeline.py" or "dataflow_starter_kit/pipeline.py")
+        file_path: Template-relative path within server's template directory.
+                  Examples:
+                  - "README.md" -> resolves to /app/template_files/README.md (in Docker)
+                  - "dataflow_starter_kit/pipeline.py"
+                  - "dataflow_starter_kit/transforms/transform.py"
+                  DO NOT use absolute paths or local filesystem paths.
 
     Returns:
-        File content as string, or error message
+        File content as string, or error message if file not found or invalid path.
     """
     try:
         template_dir = get_template_dir()
+        logger.debug(
+            f"get_template_file_content: template_dir={template_dir}, "
+            f"requested_file={file_path}"
+        )
         error = validate_template_dir(template_dir)
         if error:
+            logger.error(f"Template directory validation failed: {error}")
             return error
 
         file_path_obj = Path(file_path)
         # Prevent path traversal attacks
         if ".." in str(file_path_obj) or file_path_obj.is_absolute():
+            logger.warning(f"Invalid file path attempted: {file_path}")
             return "Error: Invalid file path"
 
         full_path = template_dir / file_path_obj
+        logger.debug(f"Resolved full path: {full_path} (exists={full_path.exists()})")
         if not full_path.exists():
+            logger.warning(f"File not found: {full_path} (template_dir={template_dir})")
             return f"Error: File not found: {file_path}"
 
         if not full_path.is_file():
