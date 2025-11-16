@@ -1,6 +1,6 @@
 # Dataflow Template MCP Server
 
-MCP server and CLI tool for creating standardized Dataflow projects from templates.
+MCP server and CLI tool for creating standardized Dataflow projects from templates. Created to help developers get started on a standard format without worrying much about the structure of their pipeline package and its deployment setup.
 
 ## What's Included
 
@@ -14,8 +14,8 @@ MCP server and CLI tool for creating standardized Dataflow projects from templat
 Clone the repository:
 
 ```bash
-git clone https://github.com/bharath03-a/dataflow_template
-cd dataflow_template
+git clone https://github.com/bharath03-a/gcp-dataflow-template-kit
+cd gcp-dataflow-template-kit
 ```
 
 ## Installation
@@ -97,7 +97,7 @@ docker run -p 8080:8080 \
 
 The project includes a GitHub Actions workflow for automatic deployment to Cloud Run.
 
-1. Set up GitHub Secrets (see `GITHUB_SETUP.md`):
+1. Set up GitHub Secrets:
 
    - `GCP_PROJECT_ID`: Your Google Cloud project ID
    - `GCP_SA_KEY`: Service account JSON key
@@ -121,7 +121,7 @@ gcloud run deploy dataflow-mcp-server \
 Test the MCP server:
 
 ```bash
-python tests\test_mcp_server_remote.py
+python tests/test_mcp_server_remote.py
 ```
 
 Set `MCP_SERVER_URL` environment variable to test against a remote server.
@@ -134,8 +134,8 @@ Set `MCP_SERVER_URL` environment variable to test against a remote server.
 ├── cli/                 # CLI tool
 ├── template_files/      # Dataflow template files
 ├── tests/               # Test script
-└── .github/workflows/   # GitHub Actions workflow
-└── .Dockerfile
+├── .github/workflows/   # GitHub Actions workflow
+└── Dockerfile           # Docker configuration
 ```
 
 ## Development

@@ -99,6 +99,6 @@ jobs:
 
       - name: Run MCP server tests
         run: |
-          python tests\test_mcp_server_remote.py
+          python tests/test_mcp_server_remote.py
         env:
           MCP_SERVER_URL: ${{ env.SERVICE_URL }}
