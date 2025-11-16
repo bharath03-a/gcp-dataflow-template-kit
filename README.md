@@ -2,6 +2,10 @@
 
 MCP server and CLI tool for creating standardized Dataflow projects from templates. Created to help developers get started on a standard format without worrying much about the structure of their pipeline package and its deployment setup.
 
+**Demo MCP Endpoint**: https://dataflow-mcp-server-308763801667.us-central1.run.app/mcp
+
+> **Note**: The endpoint is currently public and unauthenticated. Authentication will be implemented in a future release (see [Future Changes](#future-changes) section).
+
 ## What's Included
 
 - MCP server for AI coding assistants (Cursor, Claude, etc.)
@@ -116,6 +120,19 @@ gcloud run deploy dataflow-mcp-server \
   --port 8080
 ```
 
+Add to your MCP client configuration (e.g., `~/.cursor/mcp.json`):
+
+```json
+{
+  "mcpServers": {
+    "dataflow-template": {
+      "url": "<CLOUD-RUN-ENDPOINT>",
+      "transport": "http"
+    }
+  }
+}
+```
+
 ## Testing
 
 Test the MCP server:
@@ -151,6 +168,16 @@ ruff format .
 
 - `create_dataflow_project`: Creates a new Dataflow project from the template
 - `health_check`: Checks if the MCP server is running and template is accessible
+- `list_template_files`: List all files in the template directory with folder structure
+- `get_template_file_content`: Get the content of a specific template file from the server's template directory
+
+## Future Changes
+
+The following improvements are planned for future releases:
+
+- **Additional Language Templates**: Adding more templates for Java and Scala to support a broader range of Dataflow use cases
+- **Template Variations**: Providing different variations of templates (e.g., batch vs streaming, simple vs complex architectures) to better suit various project requirements
+- **Secure Authenticated Endpoint**: Implementing authentication for the MCP server endpoint to secure the public deployment and protect against unauthorized access
 
 ---
 
