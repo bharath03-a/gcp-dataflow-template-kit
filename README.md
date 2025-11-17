@@ -1,10 +1,14 @@
 # Dataflow Template MCP Server
 
-MCP server and CLI tool for creating standardized Dataflow projects from templates. Created to help developers get started on a standard format without worrying much about the structure of their pipeline package and its deployment setup.
+MCP server and CLI tool for creating standardized Dataflow projects from templates. The template is built on Apache Beam, providing a unified programming model for both batch and streaming data processing. Created to help developers get started on a standard format without worrying much about the structure of their pipeline package and its deployment setup.
 
 **Demo MCP Endpoint**: https://dataflow-mcp-server-308763801667.us-central1.run.app/mcp
 
 > **Note**: The endpoint is currently public and unauthenticated. Authentication will be implemented in a future release (see [Future Changes](#future-changes) section).
+
+**Demo Video**: Watch a walkthrough of using the MCP server with an AI coding assistant:
+
+<video src="demo/MCPDemo.mp4" controls width="100%"></video>
 
 ## What's Included
 
